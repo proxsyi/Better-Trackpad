@@ -5,9 +5,9 @@ import com.sun.jna.Function;
 import com.sun.jna.NativeLibrary;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.KeyMapping;
 import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFWNativeCocoa;
 
 import java.util.List;
@@ -16,19 +16,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class MacTouchHook {
     private static final NativeLibrary OBJC = NativeLibrary.getInstance("objc");
-    private static final Function MSG_SEND = OBJC.getFunction("objc_msgSend");
+    private static final Function MSG_SEND          = OBJC.getFunction("objc_msgSend");
     private static final Function SEL_REGISTER_NAME = OBJC.getFunction("sel_registerName");
-    private static final Function CLASS_ADD_METHOD = OBJC.getFunction("class_addMethod");
-    private static final Function OBJECT_GET_CLASS = OBJC.getFunction("object_getClass");
+    private static final Function CLASS_REPLACE_METHOD = OBJC.getFunction("class_replaceMethod");
+    private static final Function OBJECT_GET_CLASS  = OBJC.getFunction("object_getClass");
 
     private static final long NS_TOUCH_TYPE_MASK_INDIRECT = 1L << 1;
-    private static final long NS_TOUCH_PHASE_BEGAN = 0x1;
-    private static final long NS_TOUCH_PHASE_MOVED = 0x2;
-    private static final long NS_TOUCH_PHASE_ENDED = 0x8;
+    private static final long NS_TOUCH_PHASE_BEGAN     = 0x1;
+    private static final long NS_TOUCH_PHASE_ENDED     = 0x8;
     private static final long NS_TOUCH_PHASE_CANCELLED = 0x10;
     private static final double TAP_MAX_DELTA = 0.08;
 
-    // Map from touch identity pointer -> [startX, startY]
     private static final Map<Long, double[]> activeTouches = new ConcurrentHashMap<>();
 
     private static boolean installed = false;
@@ -45,6 +43,8 @@ public final class MacTouchHook {
         public double x;
         public double y;
 
+        public static class ByValue extends CGPoint implements Structure.ByValue {}
+
         @Override
         protected List<String> getFieldOrder() {
             return List.of("x", "y");
@@ -57,7 +57,7 @@ public final class MacTouchHook {
         return SEL_REGISTER_NAME.invokePointer(new Object[]{ name });
     }
 
-    private static Pointer msg(Pointer receiver, String selName, Object... args) {
+    private static Pointer msgPtr(Pointer receiver, String selName, Object... args) {
         Object[] full = new Object[2 + args.length];
         full[0] = receiver;
         full[1] = sel(selName);
@@ -73,8 +73,15 @@ public final class MacTouchHook {
         return MSG_SEND.invokeLong(full);
     }
 
-    private static CGPoint touchNormalizedPosition(Pointer touch) {
-        return (CGPoint) MSG_SEND.invoke(CGPoint.class, new Object[]{ touch, sel("normalizedPosition") });
+    private static CGPoint.ByValue touchPos(Pointer touch) {
+        return (CGPoint.ByValue) MSG_SEND.invoke(
+            CGPoint.ByValue.class,
+            new Object[]{ touch, sel("normalizedPosition") }
+        );
+    }
+
+    private static void replaceMethod(Pointer viewClass, String selName, TouchHandler impl) {
+        CLASS_REPLACE_METHOD.invokePointer(new Object[]{ viewClass, sel(selName), impl, "v@:@" });
     }
 
     private static void processTouches(Pointer event, long phase, boolean ended, boolean cancelled) {
@@ -83,44 +90,40 @@ public final class MacTouchHook {
             return;
         }
 
-        Pointer touchSet = msg(event, "touchesMatchingPhase:inView:", phase, (Pointer) null);
+        Pointer touchSet = msgPtr(event, "touchesMatchingPhase:inView:", phase, (Pointer) null);
         if (touchSet == null) return;
         long count = msgLong(touchSet, "count");
         if (count == 0) return;
 
-        Pointer enumerator = msg(touchSet, "objectEnumerator");
+        Pointer enumerator = msgPtr(touchSet, "objectEnumerator");
         if (enumerator == null) return;
 
         int tapCount = 0;
-        double sumX = 0;
+        double sumX  = 0;
         int fingerCount = (int) count;
 
         Pointer touch;
-        while ((touch = msg(enumerator, "nextObject")) != null) {
+        while ((touch = msgPtr(enumerator, "nextObject")) != null) {
             long key = Pointer.nativeValue(touch);
-            CGPoint pos = touchNormalizedPosition(touch);
+            CGPoint.ByValue pos = touchPos(touch);
             if (pos == null) continue;
 
             if (!ended) {
-                // Began: record start position
                 activeTouches.put(key, new double[]{ pos.x, pos.y });
             } else {
-                // Ended: check if tap
                 double[] start = activeTouches.remove(key);
-                if (start != null) {
-                    double dx = Math.abs(pos.x - start[0]);
-                    double dy = Math.abs(pos.y - start[1]);
-                    if (dx < TAP_MAX_DELTA && dy < TAP_MAX_DELTA) {
-                        tapCount++;
-                        sumX += pos.x;
-                    }
+                if (start == null) continue;
+                double dx = Math.abs(pos.x - start[0]);
+                double dy = Math.abs(pos.y - start[1]);
+                if (dx < TAP_MAX_DELTA && dy < TAP_MAX_DELTA) {
+                    tapCount++;
+                    sumX += pos.x;
                 }
             }
         }
 
         if (ended && tapCount == fingerCount && fingerCount > 0) {
-            double avgX = sumX / tapCount;
-            fireTap(avgX, fingerCount);
+            fireTap(sumX / tapCount, fingerCount);
         }
     }
 
@@ -145,7 +148,7 @@ public final class MacTouchHook {
         } else if (x > BetterTrackpadConfig.rightZoneMin) {
             action = BetterTrackpadConfig.rightOneFinger;
         } else {
-            return; // deadzone
+            return;
         }
 
         if (action == TrackpadAction.NONE) return;
@@ -169,27 +172,28 @@ public final class MacTouchHook {
         long nsWindowPtr = GLFWNativeCocoa.glfwGetCocoaWindow(glfwWindow);
         if (nsWindowPtr == 0L) return false;
 
-        Pointer nsWindow = new Pointer(nsWindowPtr);
-        Pointer contentView = msg(nsWindow, "contentView");
+        Pointer nsWindow   = new Pointer(nsWindowPtr);
+        Pointer contentView = msgPtr(nsWindow, "contentView");
         if (contentView == null) return false;
 
-        MSG_SEND.invokeVoid(new Object[]{ contentView, sel("setAllowedTouchTypes:"), NS_TOUCH_TYPE_MASK_INDIRECT });
-        MSG_SEND.invokeVoid(new Object[]{ contentView, sel("setWantsRestingTouches:"), (byte) 1 });
+        // Enable indirect (trackpad) touch events on the view
+        MSG_SEND.invokeVoid(new Object[]{ contentView, sel("setAcceptsTouchEvents:"),   (byte) 1 });
+        MSG_SEND.invokeVoid(new Object[]{ contentView, sel("setAllowedTouchTypes:"),    NS_TOUCH_TYPE_MASK_INDIRECT });
+        MSG_SEND.invokeVoid(new Object[]{ contentView, sel("setWantsRestingTouches:"),  (byte) 0 });
+        // Make content view first responder so it receives touch events
+        MSG_SEND.invokeVoid(new Object[]{ nsWindow,    sel("makeFirstResponder:"),      contentView });
 
-        beganHandler = (self, cmd, event) ->
-            processTouches(event, NS_TOUCH_PHASE_BEGAN, false, false);
-        movedHandler = (self, cmd, event) -> {}; // no-op, we only care about taps
-        endedHandler = (self, cmd, event) ->
-            processTouches(event, NS_TOUCH_PHASE_ENDED, true, false);
-        cancelledHandler = (self, cmd, event) ->
-            processTouches(event, NS_TOUCH_PHASE_CANCELLED, false, true);
+        beganHandler     = (self, cmd, event) -> processTouches(event, NS_TOUCH_PHASE_BEGAN,     false, false);
+        movedHandler     = (self, cmd, event) -> {};
+        endedHandler     = (self, cmd, event) -> processTouches(event, NS_TOUCH_PHASE_ENDED,     true,  false);
+        cancelledHandler = (self, cmd, event) -> processTouches(event, NS_TOUCH_PHASE_CANCELLED, false, true);
 
+        // Use class_replaceMethod — works even if the view class already has these methods
         Pointer viewClass = OBJECT_GET_CLASS.invokePointer(new Object[]{ contentView });
-        String types = "v@:@";
-        CLASS_ADD_METHOD.invokeInt(new Object[]{ viewClass, sel("touchesBeganWithEvent:"),    beganHandler,     types });
-        CLASS_ADD_METHOD.invokeInt(new Object[]{ viewClass, sel("touchesMovedWithEvent:"),    movedHandler,     types });
-        CLASS_ADD_METHOD.invokeInt(new Object[]{ viewClass, sel("touchesEndedWithEvent:"),    endedHandler,     types });
-        CLASS_ADD_METHOD.invokeInt(new Object[]{ viewClass, sel("touchesCancelledWithEvent:"), cancelledHandler, types });
+        replaceMethod(viewClass, "touchesBeganWithEvent:",     beganHandler);
+        replaceMethod(viewClass, "touchesMovedWithEvent:",     movedHandler);
+        replaceMethod(viewClass, "touchesEndedWithEvent:",     endedHandler);
+        replaceMethod(viewClass, "touchesCancelledWithEvent:", cancelledHandler);
 
         installed = true;
         return true;

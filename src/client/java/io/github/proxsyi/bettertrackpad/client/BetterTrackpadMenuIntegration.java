@@ -17,7 +17,28 @@ public final class BetterTrackpadMenuIntegration implements ModMenuApi {
 
             ConfigEntryBuilder entryBuilder = builder.entryBuilder();
 
-            // Tab 1: Configuration
+            // Tab 1: Bindings — touch is the label, action is the dropdown
+            ConfigCategory bindings = builder.getOrCreateCategory(Component.literal("Bindings"));
+
+            bindings.addEntry(entryBuilder
+                .startEnumSelector(Component.literal("1-Finger Left"), TrackpadAction.class, BetterTrackpadConfig.leftOneFinger)
+                .setDefaultValue(TrackpadAction.LEFT_CLICK)
+                .setSaveConsumer(val -> BetterTrackpadConfig.leftOneFinger = val)
+                .build());
+
+            bindings.addEntry(entryBuilder
+                .startEnumSelector(Component.literal("1-Finger Right"), TrackpadAction.class, BetterTrackpadConfig.rightOneFinger)
+                .setDefaultValue(TrackpadAction.RIGHT_CLICK)
+                .setSaveConsumer(val -> BetterTrackpadConfig.rightOneFinger = val)
+                .build());
+
+            bindings.addEntry(entryBuilder
+                .startEnumSelector(Component.literal("2-Finger Tap"), TrackpadAction.class, BetterTrackpadConfig.twoFinger)
+                .setDefaultValue(TrackpadAction.MIDDLE_CLICK)
+                .setSaveConsumer(val -> BetterTrackpadConfig.twoFinger = val)
+                .build());
+
+            // Tab 2: Configuration
             ConfigCategory config = builder.getOrCreateCategory(Component.literal("Configuration"));
 
             config.addEntry(entryBuilder
@@ -40,27 +61,6 @@ public final class BetterTrackpadMenuIntegration implements ModMenuApi {
                 .setMin(0.0f)
                 .setMax(1.0f)
                 .setSaveConsumer(val -> BetterTrackpadConfig.rightZoneMin = val)
-                .build());
-
-            // Tab 2: Bindings — touch is the label, action is the dropdown
-            ConfigCategory bindings = builder.getOrCreateCategory(Component.literal("Bindings"));
-
-            bindings.addEntry(entryBuilder
-                .startEnumSelector(Component.literal("1-Finger Left"), TrackpadAction.class, BetterTrackpadConfig.leftOneFinger)
-                .setDefaultValue(TrackpadAction.LEFT_CLICK)
-                .setSaveConsumer(val -> BetterTrackpadConfig.leftOneFinger = val)
-                .build());
-
-            bindings.addEntry(entryBuilder
-                .startEnumSelector(Component.literal("1-Finger Right"), TrackpadAction.class, BetterTrackpadConfig.rightOneFinger)
-                .setDefaultValue(TrackpadAction.RIGHT_CLICK)
-                .setSaveConsumer(val -> BetterTrackpadConfig.rightOneFinger = val)
-                .build());
-
-            bindings.addEntry(entryBuilder
-                .startEnumSelector(Component.literal("2-Finger Tap"), TrackpadAction.class, BetterTrackpadConfig.twoFinger)
-                .setDefaultValue(TrackpadAction.MIDDLE_CLICK)
-                .setSaveConsumer(val -> BetterTrackpadConfig.twoFinger = val)
                 .build());
 
             return builder.build();
