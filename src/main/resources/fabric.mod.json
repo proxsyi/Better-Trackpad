@@ -20,6 +20,9 @@
 		],
 		"client": [
 			"io.github.proxsyi.bettertrackpad.client.BetterTrackpadClient"
+		],
+		"modmenu": [
+			"io.github.proxsyi.bettertrackpad.client.BetterTrackpadMenuIntegration"
 		]
 	},
 	"mixins": [
@@ -34,5 +37,9 @@
 		"minecraft": "~26.1",
 		"java": ">=25",
 		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*",
+		"cloth-config": "*"
 	}
 }
