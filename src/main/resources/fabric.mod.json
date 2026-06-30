@@ -1,0 +1,38 @@
+{
+	"schemaVersion": 1,
+	"id": "better-trackpad",
+	"version": "${version}",
+	"name": "Better Trackpad",
+	"description": "Remaps Mac trackpad gestures into easier left, right, and middle clicks. Fully rebindable via Mod Menu.",
+	"authors": [
+		"proxsyi"
+	],
+	"contact": {
+		"homepage": "https://github.com/proxsyi/better-trackpad",
+		"sources": "https://github.com/proxsyi/better-trackpad"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/better-trackpad/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.proxsyi.bettertrackpad.BetterTrackpad"
+		],
+		"client": [
+			"io.github.proxsyi.bettertrackpad.client.BetterTrackpadClient"
+		]
+	},
+	"mixins": [
+		"better-trackpad.mixins.json",
+		{
+			"config": "better-trackpad.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.1",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
