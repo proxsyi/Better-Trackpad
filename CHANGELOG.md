@@ -9,3 +9,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 - Initial Fabric mod scaffold for Minecraft 26.1 (Java 25, split client/common sources).
 - Project `.gitignore` and changelog.
+- macOS trackpad touch reader hooked to Minecraft's window via JNA + NSTouch (no system permissions); reads finger count and per-finger position.
