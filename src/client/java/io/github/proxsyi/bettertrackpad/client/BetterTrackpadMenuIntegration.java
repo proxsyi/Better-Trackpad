@@ -13,11 +13,12 @@ public final class BetterTrackpadMenuIntegration implements ModMenuApi {
         return parent -> {
             ConfigBuilder builder = ConfigBuilder.create()
                 .setParentScreen(parent)
-                .setTitle(Component.literal("Better Trackpad"));
+                .setTitle(Component.literal("Better Trackpad"))
+                .setSavingRunnable(BetterTrackpadConfigManager::save);
 
             ConfigEntryBuilder entryBuilder = builder.entryBuilder();
 
-            // Tab 1: Bindings — touch is the label, action is the dropdown
+            // Tab 1: Bindings
             ConfigCategory bindings = builder.getOrCreateCategory(Component.literal("Bindings"));
 
             bindings.addEntry(entryBuilder

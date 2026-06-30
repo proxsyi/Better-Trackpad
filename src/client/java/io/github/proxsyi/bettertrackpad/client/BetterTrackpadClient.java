@@ -15,6 +15,8 @@ public class BetterTrackpadClient implements ClientModInitializer {
         boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
         if (!isMac) return;
 
+        BetterTrackpadConfigManager.load();
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (hookAttempted) return;
             long handle = GLFW.glfwGetCurrentContext();
