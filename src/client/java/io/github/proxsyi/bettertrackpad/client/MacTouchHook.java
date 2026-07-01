@@ -11,7 +11,7 @@ import org.lwjgl.glfw.GLFWNativeCocoa;
 
 import java.util.List;
 
-public final class MacTouchHook {
+public final class MacTouchHook implements PlatformTouchHook {
     private static final NativeLibrary OBJC = NativeLibrary.getInstance("objc");
     private static final Function MSG_SEND             = OBJC.getFunction("objc_msgSend");
     private static final Function SEL_REGISTER_NAME    = OBJC.getFunction("sel_registerName");
@@ -20,19 +20,26 @@ public final class MacTouchHook {
 
     private static final long NS_TOUCH_TYPE_MASK_INDIRECT = 1L << 1;
     private static final long NS_TOUCH_PHASE_BEGAN        = 0x1;
+    private static final long NS_TOUCH_PHASE_MOVED        = 0x2;
     private static final long NS_TOUCH_PHASE_ENDED        = 0x8;
     private static final long NS_TOUCH_PHASE_CANCELLED    = 0x10;
     private static final int MAX_TOUCHES_PER_EVENT = 32;
 
-    private static volatile boolean disabled = false;
+    private final TouchListener listener;
 
-    private static GLFWMouseButtonCallbackI prevGlfwCallback = null;
+    private volatile boolean disabled = false;
+    private boolean installed = false;
 
-    private static boolean installed = false;
-    private static TouchHandler beganHandler;
-    private static TouchHandler movedHandler;
-    private static TouchHandler endedHandler;
-    private static TouchHandler cancelledHandler;
+    private GLFWMouseButtonCallbackI prevGlfwCallback = null;
+
+    private TouchHandler beganHandler;
+    private TouchHandler movedHandler;
+    private TouchHandler endedHandler;
+    private TouchHandler cancelledHandler;
+
+    public MacTouchHook(TouchListener listener) {
+        this.listener = listener;
+    }
 
     public interface TouchHandler extends Callback {
         void invoke(Pointer self, Pointer cmd, Pointer event);
@@ -50,9 +57,7 @@ public final class MacTouchHook {
         }
     }
 
-    private MacTouchHook() {}
-
-    public static boolean isDisabled() {
+    public boolean isDisabled() {
         return disabled;
     }
 
@@ -92,7 +97,7 @@ public final class MacTouchHook {
         CLASS_REPLACE_METHOD.invokePointer(new Object[]{ viewClass, sel(selName), impl, "v@:@" });
     }
 
-    private static void safeEmit(Pointer event, long nsPhase, TouchEvent.Phase phase) {
+    private void safeEmit(Pointer event, long nsPhase, TouchEvent.Phase phase) {
         if (disabled) return;
         try {
             emitTouches(event, nsPhase, phase);
@@ -102,13 +107,11 @@ public final class MacTouchHook {
         }
     }
 
-    private static void emitTouches(Pointer event, long nsPhase, TouchEvent.Phase phase) {
+    private void emitTouches(Pointer event, long nsPhase, TouchEvent.Phase phase) {
         Pointer touchSet = msgPtr(event, "touchesMatchingPhase:inView:", nsPhase, (Pointer) null);
         if (touchSet == null) return;
         long count = msgLong(touchSet, "count");
         if (count == 0) return;
-
-        BetterTrackpadClient.LOGGER.info("[better-trackpad] emit phase={} count={}", phase, count);
 
         Pointer enumerator = msgPtr(touchSet, "objectEnumerator");
         if (enumerator == null) return;
@@ -124,11 +127,12 @@ public final class MacTouchHook {
             long key = touchKey(touch);
             CGPoint.ByValue pos = touchPos(touch);
             if (pos == null) continue;
-            GestureDetector.onTouch(new TouchEvent(key, pos.x, pos.y, phase, TouchEvent.Pressure.NORMAL));
+            listener.onTouch(new TouchEvent(key, pos.x, pos.y, phase, TouchEvent.Pressure.NORMAL));
         }
     }
 
-    public static synchronized boolean install(long glfwWindow) {
+    @Override
+    public synchronized boolean install(long glfwWindow) {
         if (installed) return true;
 
         long nsWindowPtr = GLFWNativeCocoa.glfwGetCocoaWindow(glfwWindow);
@@ -141,13 +145,13 @@ public final class MacTouchHook {
 
         MSG_SEND.invokeVoid(new Object[]{ contentView, sel("setAcceptsTouchEvents:"),  (byte) 1 });
         MSG_SEND.invokeVoid(new Object[]{ contentView, sel("setAllowedTouchTypes:"),   NS_TOUCH_TYPE_MASK_INDIRECT });
-        MSG_SEND.invokeVoid(new Object[]{ contentView, sel("setWantsRestingTouches:"), (byte) 0 });
+        MSG_SEND.invokeVoid(new Object[]{ contentView, sel("setWantsRestingTouches:"), (byte) 1 });
         MSG_SEND.invokeVoid(new Object[]{ nsWindow,    sel("makeFirstResponder:"),     contentView });
 
         prevGlfwCallback = GLFW.glfwSetMouseButtonCallback(glfwWindow, (win, button, action, mods) -> {
             try {
                 boolean trackpadButton = button == GLFW.GLFW_MOUSE_BUTTON_LEFT || button == GLFW.GLFW_MOUSE_BUTTON_RIGHT;
-                if (!disabled && trackpadButton && GestureDetector.onOsButton(action == GLFW.GLFW_PRESS)) {
+                if (!disabled && trackpadButton && listener.onButton(action == GLFW.GLFW_PRESS)) {
                     return;
                 }
             } catch (Throwable t) {
@@ -158,7 +162,7 @@ public final class MacTouchHook {
         });
 
         beganHandler     = (self, cmd, event) -> safeEmit(event, NS_TOUCH_PHASE_BEGAN,     TouchEvent.Phase.BEGAN);
-        movedHandler     = (self, cmd, event) -> {};
+        movedHandler     = (self, cmd, event) -> safeEmit(event, NS_TOUCH_PHASE_MOVED,     TouchEvent.Phase.MOVED);
         endedHandler     = (self, cmd, event) -> safeEmit(event, NS_TOUCH_PHASE_ENDED,     TouchEvent.Phase.ENDED);
         cancelledHandler = (self, cmd, event) -> safeEmit(event, NS_TOUCH_PHASE_CANCELLED, TouchEvent.Phase.CANCELLED);
 

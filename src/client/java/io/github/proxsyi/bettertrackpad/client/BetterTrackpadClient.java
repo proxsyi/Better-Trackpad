@@ -8,7 +8,10 @@ import org.slf4j.LoggerFactory;
 
 public class BetterTrackpadClient implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("better-trackpad");
-    private static boolean hookAttempted = false;
+
+    private final GestureDetector detector = new GestureDetector(new MinecraftActuator());
+    private final PlatformTouchHook hook = new MacTouchHook(detector);
+    private boolean hookAttempted = false;
 
     @Override
     public void onInitializeClient() {
@@ -22,11 +25,11 @@ public class BetterTrackpadClient implements ClientModInitializer {
                 long handle = GLFW.glfwGetCurrentContext();
                 if (handle != 0L) {
                     hookAttempted = true;
-                    boolean ok = MacTouchHook.install(handle);
+                    boolean ok = hook.install(handle);
                     LOGGER.info("[better-trackpad] touch hook install: {}", ok);
                 }
             }
-            GestureDetector.tick();
+            detector.tick();
         });
     }
 }
