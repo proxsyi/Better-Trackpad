@@ -13,6 +13,12 @@ public class BetterTrackpadClient implements ClientModInitializer {
     private final PlatformTouchHook hook = new MacTouchHook(detector);
     private boolean hookAttempted = false;
 
+    public static void debug(String message, Object... args) {
+        if (BetterTrackpadConfig.debug) {
+            LOGGER.info(message, args);
+        }
+    }
+
     @Override
     public void onInitializeClient() {
         boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
@@ -26,7 +32,7 @@ public class BetterTrackpadClient implements ClientModInitializer {
                 if (handle != 0L) {
                     hookAttempted = true;
                     boolean ok = hook.install(handle);
-                    LOGGER.info("[better-trackpad] touch hook install: {}", ok);
+                    debug("[better-trackpad] touch hook install: {}", ok);
                 }
             }
             detector.tick();

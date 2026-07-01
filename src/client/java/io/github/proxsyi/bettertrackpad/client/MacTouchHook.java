@@ -136,7 +136,7 @@ public final class MacTouchHook implements PlatformTouchHook {
         if (installed) return true;
 
         long nsWindowPtr = GLFWNativeCocoa.glfwGetCocoaWindow(glfwWindow);
-        BetterTrackpadClient.LOGGER.info("[better-trackpad] nsWindowPtr={}", nsWindowPtr);
+        BetterTrackpadClient.debug("[better-trackpad] nsWindowPtr={}", nsWindowPtr);
         if (nsWindowPtr == 0L) return false;
 
         Pointer nsWindow    = new Pointer(nsWindowPtr);
@@ -173,7 +173,7 @@ public final class MacTouchHook implements PlatformTouchHook {
         replaceMethod(viewClass, "touchesCancelledWithEvent:", cancelledHandler);
 
         installed = true;
-        BetterTrackpadClient.LOGGER.info("[better-trackpad] install complete");
+        BetterTrackpadClient.debug("[better-trackpad] install complete");
         return true;
     }
 }

@@ -79,7 +79,7 @@ public final class GestureDetector implements TouchListener {
         long sinceTouch = now - lastTouchNanos;
 
         if (!press) {
-            BetterTrackpadClient.LOGGER.info("[better-trackpad] osbtn release escalated={} peak={} active={} sinceTouchMs={}",
+            BetterTrackpadClient.debug("[better-trackpad] osbtn release escalated={} peak={} active={} sinceTouchMs={}",
                     escalated, peakFingers, activeTouches.size(), sinceTouch / 1_000_000L);
             clearGesture();
             actuator.releaseHold();
@@ -92,7 +92,7 @@ public final class GestureDetector implements TouchListener {
         boolean trackpadOrigin = !activeTouches.isEmpty() || sinceTouch < window;
         int fingers = peakFingers > 0 ? peakFingers : 1;
 
-        BetterTrackpadClient.LOGGER.info("[better-trackpad] osbtn press origin={} peak={} active={} lastX={} sinceTouchMs={}",
+        BetterTrackpadClient.debug("[better-trackpad] osbtn press origin={} peak={} active={} lastX={} sinceTouchMs={}",
                 trackpadOrigin, peakFingers, activeTouches.size(), String.format("%.3f", lastTouchX), sinceTouch / 1_000_000L);
 
         if (trackpadOrigin) {
@@ -108,7 +108,7 @@ public final class GestureDetector implements TouchListener {
                 && tickCounter - buttonDownTick >= HOLD_THRESHOLD_TICKS) {
             actuator.beginHold(pendingAction);
             escalated = true;
-            BetterTrackpadClient.LOGGER.info("[better-trackpad] escalate hold action={}", pendingAction);
+            BetterTrackpadClient.debug("[better-trackpad] escalate hold action={}", pendingAction);
         }
     }
 
@@ -117,23 +117,23 @@ public final class GestureDetector implements TouchListener {
 
         TrackpadAction action = resolveAction(x, fingers);
         if (action == null) {
-            BetterTrackpadClient.LOGGER.info("[better-trackpad] deadzone x={}", String.format("%.3f", x));
+            BetterTrackpadClient.debug("[better-trackpad] deadzone x={}", String.format("%.3f", x));
             return;
         }
 
         long now = System.nanoTime();
         if (now - lastFireNanos < FIRE_COOLDOWN_NANOS) {
-            BetterTrackpadClient.LOGGER.info("[better-trackpad] debounced fingers={} action={}", fingers, action);
+            BetterTrackpadClient.debug("[better-trackpad] debounced fingers={} action={}", fingers, action);
             return;
         }
         lastFireNanos = now;
 
         if (action == TrackpadAction.NONE) {
-            BetterTrackpadClient.LOGGER.info("[better-trackpad] suppress fingers={}", fingers);
+            BetterTrackpadClient.debug("[better-trackpad] suppress fingers={}", fingers);
             return;
         }
 
-        BetterTrackpadClient.LOGGER.info("[better-trackpad] fire fingers={} x={} mode=click -> action={}",
+        BetterTrackpadClient.debug("[better-trackpad] fire fingers={} x={} mode=click -> action={}",
                 fingers, String.format("%.3f", x), action);
         actuator.click(action);
 

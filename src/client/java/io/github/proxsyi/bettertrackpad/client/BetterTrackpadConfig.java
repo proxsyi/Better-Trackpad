@@ -2,6 +2,7 @@ package io.github.proxsyi.bettertrackpad.client;
 
 public final class BetterTrackpadConfig {
     public static boolean enabled = true;
+    public static boolean debug = false;
     public static float leftZoneMax = 0.45f;
     public static float rightZoneMin = 0.55f;
 
