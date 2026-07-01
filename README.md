@@ -7,6 +7,9 @@ A Minecraft Fabric mod that remaps Mac trackpad zones and gestures into configur
 - macOS (Apple Silicon or Intel)
 - Minecraft 26.1.x
 - Fabric Loader 0.19.3+
+- [Fabric API](https://modrinth.com/mod/fabric-api)
+
+### Optional
 - [Mod Menu](https://modrinth.com/mod/modmenu)
 - [Cloth Config](https://modrinth.com/mod/cloth-config)
 
@@ -21,10 +24,10 @@ A Minecraft Fabric mod that remaps Mac trackpad zones and gestures into configur
 
 Better Trackpad divides your trackpad into horizontal zones:
 
-    ┌──────────────────────────────────┐
+    ┌────────────────────────────────────┐
     │  Left Zone  │  Deadzone  │  Right  │
     │  (x < 0.45) │            │ (x>0.55)│
-    └──────────────────────────────────┘
+    └────────────────────────────────────┘
 
 | Gesture | Default Action |
 |---|---|
