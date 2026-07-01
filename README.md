@@ -24,10 +24,10 @@ A Minecraft Fabric mod that remaps Mac trackpad zones and gestures into configur
 
 Better Trackpad divides your trackpad into horizontal zones:
 
-    ┌────────────────────────────────────┐
-    │  Left Zone  │  Deadzone  │  Right  │
-    │  (x < 0.45) │            │ (x>0.55)│
-    └────────────────────────────────────┘
+┌──────────────────────────────────┐
+│  Left Zone  │  Deadzone  │  Right  │
+│  (x < 0.45) │            │ (x>0.55)│
+└──────────────────────────────────┘
 
 | Gesture | Default Action |
 |---|---|
@@ -36,7 +36,7 @@ Better Trackpad divides your trackpad into horizontal zones:
 | 2-finger tap | Middle Click |
 | Physical click | Zone-aware (same mapping) |
 
-All bindings are fully remappable. Works with or without macOS tap-to-click.
+Hold a click past a short threshold and it escalates into a continuous hold, so mining blocks and using items behave exactly like a held mouse button. All bindings are fully remappable. Works with or without macOS tap-to-click.
 
 ## Configuration
 
@@ -45,18 +45,19 @@ Open **Esc → Mods → Better Trackpad → Config**:
 - **Bindings tab** — assign Left Click, Right Click, Middle Click, or None to each gesture
 - **Configuration tab** — toggle the mod on/off, adjust left/right zone thresholds
 
-Settings persist to `config/better-trackpad.json`.
+Settings persist to `config/better-trackpad.json`. Set `"debug": true` there to enable verbose diagnostic logging (off by default).
 
 ## How It's Built
 
 - Hooks into Minecraft's native macOS window via JNA + Objective-C runtime
 - Reads raw `NSTouch` events directly — no Accessibility or Input Monitoring permissions
-- Intercepts GLFW mouse button callbacks to redirect system clicks into the correct action
+- Owns the in-game trackpad button so system clicks never leak through as stray attacks
+- Layered for portability: a platform touch hook feeds a gesture detector, which drives an actuator — keeping OS input, gesture interpretation, and game actions decoupled so new platforms can be added without touching the core logic
 - Compatible with macOS tap-to-click enabled or disabled
 
 ## Building from Source
 
-    ./gradlew build
+./gradlew build
 
 Requires Java 25 (Temurin recommended). Output jar is in `build/libs/`.
 
