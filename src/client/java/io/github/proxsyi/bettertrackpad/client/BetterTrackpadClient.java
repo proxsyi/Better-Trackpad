@@ -18,12 +18,15 @@ public class BetterTrackpadClient implements ClientModInitializer {
         BetterTrackpadConfigManager.load();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (hookAttempted) return;
-            long handle = GLFW.glfwGetCurrentContext();
-            if (handle == 0L) return;
-            hookAttempted = true;
-            boolean ok = MacTouchHook.install(handle);
-            LOGGER.info("[better-trackpad] touch hook install: {}", ok);
+            if (!hookAttempted) {
+                long handle = GLFW.glfwGetCurrentContext();
+                if (handle != 0L) {
+                    hookAttempted = true;
+                    boolean ok = MacTouchHook.install(handle);
+                    LOGGER.info("[better-trackpad] touch hook install: {}", ok);
+                }
+            }
+            GestureDetector.tick();
         });
     }
 }
