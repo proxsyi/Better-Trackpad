@@ -13,7 +13,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Physical click zone-awareness (right zone → right click, 2-finger press → middle click)
 - GLFW mouse button intercept redirects macOS tap-to-click without double-firing
 - Mod Menu integration with Bindings tab (first) and Configuration tab
-- Per-gesture action assignment (LEFT_CLICK, RIGHT_CLICK, MIDDLE_CLICK, NONE)
+- Per-gesture action assignment via TrackpadAction enum (LEFT_CLICK, RIGHT_CLICK, MIDDLE_CLICK, NONE)
 - Config persistence via config/better-trackpad.json
 - macOS trackpad hook via JNA + NSTouch on Minecraft's native window — no system permissions required
 - Cloth Config UI with zone threshold sliders and enabled toggle
+- All Rights Reserved (ARR) license (`LICENSE`); `fabric.mod.json` license field set to `LicenseRef-All-Rights-Reserved`
+- Mod icon at `assets/better-trackpad/icon.png`, shown in Mod Menu
+
+### Changed
+- `README.md`: Fabric API is now a hard requirement; Mod Menu and Cloth Config moved to Optional; added License section
