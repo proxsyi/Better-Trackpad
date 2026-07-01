@@ -23,12 +23,12 @@ A Minecraft Fabric mod that remaps Mac trackpad zones and gestures into configur
 ## How It Works
 
 Better Trackpad divides your trackpad into horizontal zones:
-
-┌──────────────────────────────────┐
-│  Left Zone  │  Deadzone  │  Right  │
-│  (x < 0.45) │            │ (x>0.55)│
-└──────────────────────────────────┘
-
+```
+┌────────────────────────────────────────┐
+│  Left Zone  │  Deadzone  │  Right Zone │
+│  (x < 0.45) │            │   (x>0.55)  │
+└────────────────────────────────────────┘
+```
 | Gesture | Default Action |
 |---|---|
 | 1-finger tap — left zone | Left Click |
